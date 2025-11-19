@@ -1,3 +1,5 @@
+from .fetcher import Fetcher
 from .hyperscript import E, Markdown
 from .pageinfo import PageInfo
-from .fetcher import Fetcher
+
+__all__ = ["E", "Fetcher", "Markdown", "PageInfo"]

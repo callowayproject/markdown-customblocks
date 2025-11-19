@@ -130,3 +130,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+.idea/
+
+testcache/
+testdata/
+fetchercache/
+cached_images/

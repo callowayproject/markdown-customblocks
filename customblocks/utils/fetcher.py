@@ -1,32 +1,28 @@
 import json
 from pathlib import Path
+from typing import Any, Union
+
 import requests
 from yamlns import namespace as ns
 
-class Fetcher:
 
-    def __init__(self, cache):
-        self.cachedir = Path(cache)
+class Fetcher:
+    def __init__(self, cache: Union[str, Path]) -> None:
+        self.cachedir: Path = Path(cache)
         if not self.cachedir.exists():
             self.cachedir.mkdir(parents=True)
 
-    def _url2path(self, url):
-        return self.cachedir / (
-            url
-                .replace('://','_')
-                .replace('//','_')
-                .replace('/','_')
-            )
+    def _url2path(self, url: str) -> Path:
+        return self.cachedir / (url.replace("://", "_").replace("//", "_").replace("/", "_"))
 
-    def clear(self):
-        for item in self.cachedir.glob('*'):
+    def clear(self) -> None:
+        for item in self.cachedir.glob("*"):
             item.unlink()
         if self.cachedir.exists():
             self.cachedir.rmdir()
 
-
     @staticmethod
-    def _response2namespace(response):
+    def _response2namespace(response: requests.Response) -> Any:
         result = ns(
             url=response.url,
             headers=ns(response.headers),
@@ -35,7 +31,7 @@ class Fetcher:
         try:
             result.update(json=response.json())
         except Exception:
-            if 'text' in response.headers['Content-Type']:
+            if "text" in response.headers["Content-Type"]:
                 result.update(
                     text=response.text,
                     encoding=response.encoding,
@@ -46,21 +42,22 @@ class Fetcher:
         return result
 
     @staticmethod
-    def _namespace2response(namespace):
+    def _namespace2response(namespace: Any) -> requests.Response:
         result = requests.Response()
         for key in namespace:
-            if key in ('content', 'text', 'json'): continue
+            if key in ("content", "text", "json"):
+                continue
             setattr(result, key, namespace[key])
-        if 'text' in namespace:
+        if "text" in namespace:
             result._content = namespace.text.encode(namespace.encoding)
-        elif 'json' in namespace:
-            result._content = json.dumps(namespace.json).encode('utf8')
+        elif "json" in namespace:
+            result._content = json.dumps(namespace.json).encode("utf8")
         else:
             result._content = namespace.content
         return result
 
-    def get(self, url):
-        cachefile = self._url2path(url)
+    def get(self, url: str) -> requests.Response:
+        cachefile: Path = self._url2path(url)
         if cachefile.exists():
             info = ns.load(str(cachefile))
             return self._namespace2response(info)
@@ -69,8 +66,9 @@ class Fetcher:
             self._response2namespace(response).dump(self._url2path(url))
         return response
 
-    def remove(self, url):
-        cachefile = self._url2path(url)
+    def remove(self, url: str) -> None:
+        cachefile: Path = self._url2path(url)
         cachefile.unlink()
+
 
 # vim: et ts=4 sw=4

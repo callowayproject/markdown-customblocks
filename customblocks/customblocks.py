@@ -1,90 +1,128 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-from markdown.extensions import Extension
-from markdown.blockprocessors import BlockProcessor
-from xml.etree import ElementTree as etree
+"""CustomBlocks extension for Python-Markdown."""
+
 import importlib
-import re
-from yamlns import namespace as ns
 import inspect
+import re
 import warnings
-from .generators import container
+from typing import List
+from xml.etree import ElementTree as etree  # noqa: N813, S405
+
+from markdown.blockprocessors import BlockProcessor
+from markdown.core import Markdown
+from markdown.extensions import Extension
+from yamlns import namespace as ns
+
 from .entrypoints import load_entry_points_group
+from .generators import container
 
-generators_group = 'markdown.customblocks.generators'
+generators_group = "markdown.customblocks.generators"
 
-def _installedGenerators():
-    if not hasattr(_installedGenerators, 'value'):
+
+def _installed_generators() -> List:
+    """
+    Retrieves and caches the installed generators.
+
+    This function checks for previously cached installed generators. If not cached,
+    it loads and caches the installed generators from the specified entry points
+    group.
+
+    Returns:
+        A list of installed generators.
+    """
+    if not hasattr(_installed_generators, "value"):
         generators = load_entry_points_group(generators_group)
-        _installedGenerators.value = generators
-    return _installedGenerators.value
+        _installed_generators.value = generators
+    return _installed_generators.value
+
 
 class CustomBlocksExtension(Extension):
-    """ CustomBlocks extension for Python-Markdown. """
+    """CustomBlocks extension for Python-Markdown."""
 
     def __init__(self, **kwargs):
-        self.config = dict(
-            fallback=[
+        self.config = {
+            "fallback": [
                 container,
-                "Renderer used when the type is not defined. "
-                "By default, is a div container.",
+                "Renderer used when the type is not defined. By default, is a div container.",
             ],
-            generators=[
+            "generators": [
                 {},
                 "Type-renderer bind as a dict, it will update the default map. "
                 "Set a type to None to use the fallback.",
             ],
-            config=[
+            "config": [
                 {},
                 "Generators config parameters.",
             ],
-        )
-        super(CustomBlocksExtension, self).__init__(**kwargs)
+        }
+        super().__init__(**kwargs)
 
-    def extendMarkdown(self, md):
-        """ Add CustomBlocks to Markdown instance. """
+    def extendMarkdown(self, md: Markdown) -> None:
+        """Add CustomBlocks to a Markdown instance."""
         md.registerExtension(self)
         processor = CustomBlocksProcessor(md.parser)
         processor.config = self.getConfigs()
         processor.md = md
-        md.parser.blockprocessors.register(processor, 'customblocks', 105)
+        md.parser.blockprocessors.register(processor, "customblocks", 105)
 
 
 class CustomBlocksProcessor(BlockProcessor):
+    """
+    Custom processor for handling specific block structures in a Markdown parser.
+
+    This class extends the BlockProcessor class and is designed to detect and process
+    custom blocks with specific syntaxes. Blocks are identified by headlines matching
+    a predetermined pattern and can contain optional parameters and content. This processor
+    parses such blocks, handles their parameters, manages nested content, and invokes
+    appropriate callback functions to generate desired output.
+
+    The customization includes:
+    - Defining regex to detect headlines, their parameters, and optional closing markers.
+    - Parsing the blocks to extract parameters and content.
+    - Adapting parameters to match the signature of callbacks.
+    - Invoking associated generators for block types to produce output.
+
+    Attributes:
+        RE_HEADLINE: Regular expression that detects the block headlines with optional
+            parameters and ending.
+        RE_PARAM: Regular expression that extracts key-value or keyless parameters
+            from parsed headlines.
+        RE_END: Regular expression that identifies optional end markers in blocks.
+    """
+
     # Detects headlines
     RE_HEADLINE = re.compile(
-        r'(?:^|\n)::: *' # marker
-        r'([\w\-]+)' # keyword
-        r'(?:( |\\\n)+(?:[\w]+=)?(' # params (optional keyword)
-            r"'(?:\\.|[^'])*'|" # single quoted
-            r'"(?:\\.|[^"])*"|' # double quoted
-            r'[\S]+' # single word
-        r'))*'
-        r'\s*(?:\n|$)' # ending
+        r"(?:^|\n)::: *"  # marker
+        r"([\w\-]+)"  # keyword
+        r"(?:( |\\\n)+(?:[\w]+=)?("  # params (optional keyword)
+        r"'(?:\\.|[^'])*'|"  # single quoted
+        r'"(?:\\.|[^"])*"|'  # double quoted
+        r"[\S]+"  # single word
+        r"))*"
+        r"\s*(?:\n|$)"  # ending
     )
     # Extracts every parameter from the headline as (optional) key and value
     RE_PARAM = re.compile(
-        r' (?:([\w\-]+)=)?('
-            r"'(?:\\.|[^'])*'|" # single quoted
-            r'"(?:\\.|[^"])*"|' # double quoted
-            r'[\S]+' # single word
-        r')')
+        r" (?:([\w\-]+)=)?("
+        r"'(?:\\.|[^'])*'|"  # single quoted
+        r'"(?:\\.|[^"])*"|'  # double quoted
+        r"[\S]+"  # single word
+        r")"
+    )
     # Detect optional end markers
-    RE_END = re.compile(r'^:::(?:$|\n)')
+    RE_END = re.compile(r"^:::(?:$|\n)")
 
-    def test(self, parent, block):
+    def test(self, parent: etree.Element, block: str) -> re.Match[str] | None:
+        """Checks whether a block matches the expected headline format."""
         return self.RE_HEADLINE.search(block)
 
     def _getGenerator(self, symbolname):
         if callable(symbolname):
             return symbolname
-        modulename, functionname = symbolname.split(':', 1)
+        modulename, functionname = symbolname.split(":", 1)
         module = importlib.import_module(modulename)
         generator = getattr(module, functionname)
         if not callable(generator):
-            raise ValueError(
-                "{} is not callable".format(symbolname)
-            )
+            raise ValueError("{} is not callable".format(symbolname))
         return generator
 
     def _indentedContent(self, blocks):
@@ -102,7 +140,7 @@ class CustomBlocksProcessor(BlockProcessor):
             if unindented:
                 blocks.insert(0, unindented)
                 break
-        return '\n\n'.join(content)
+        return "\n\n".join(content)
 
     def _processParams(self, params):
         """Parses the block head line to extract parameters,
@@ -113,7 +151,7 @@ class CustomBlocksProcessor(BlockProcessor):
         The method returns a tuple of a list with all keyless
         parameters and a dict with all keyword parameters.
         """
-        params = params.replace('\\\n', ' ')
+        params = params.replace("\\\n", " ")
         args = []
         kwd = {}
         for key, param in self.RE_PARAM.findall(params):
@@ -140,15 +178,15 @@ class CustomBlocksProcessor(BlockProcessor):
 
         # Turn flags into boolean keywords
         for name, param in signature.parameters.items():
-            if type(param.default) != bool and param.annotation != bool:
+            if type(param.default) is not bool and param.annotation is not bool:
                 continue
 
             if name in args:
                 args.remove(name)
                 kwds[name] = True
 
-            if 'no' + name in args:
-                args.remove('no' + name)
+            if "no" + name in args:
+                args.remove("no" + name)
                 kwds[name] = False
 
         outargs = []
@@ -156,7 +194,7 @@ class CustomBlocksProcessor(BlockProcessor):
         acceptAnyKey = False
         acceptAnyPos = False
         for name, param in signature.parameters.items():
-            if name == 'ctx':
+            if name == "ctx":
                 outargs.append(ctx)
                 continue
             if param.kind == param.VAR_KEYWORD:
@@ -198,10 +236,10 @@ class CustomBlocksProcessor(BlockProcessor):
     def _extractHeadline(self, block):
         match = self.RE_HEADLINE.search(block)
         return (
-            block[: match.start()], # pre
-            match.group(1), # type
-            block[match.end(1) : match.end()], # params
-            block[match.end() :], # post
+            block[: match.start()],  # pre
+            match.group(1),  # type
+            block[match.end(1) : match.end()],  # params
+            block[match.end() :],  # post
         )
 
     def run(self, parent, blocks):
@@ -214,12 +252,9 @@ class CustomBlocksProcessor(BlockProcessor):
         content = self._indentedContent(blocks)
         # Remove optional closing if present
         if blocks:
-            blocks[0] = self.RE_END.sub('', blocks[0])
+            blocks[0] = self.RE_END.sub("", blocks[0])
 
-        generators = dict(
-            _installedGenerators(),
-            **self.config['generators']
-        )
+        generators = dict(_installed_generators(), **self.config["generators"])
         generator = self._getGenerator(generators.get(blocktype, container))
 
         ctx = ns()
@@ -230,7 +265,7 @@ class CustomBlocksProcessor(BlockProcessor):
         if not hasattr(self.parser.md, "Meta") or not self.parser.md.Meta:
             self.parser.md.Meta = {}
         ctx.metadata = self.parser.md.Meta
-        ctx.config = ns(self.config.get('config',{}))
+        ctx.config = ns(self.config.get("config", {}))
 
         outargs, kwds = self._adaptParams(generator, ctx, args, kwds)
 
@@ -238,14 +273,16 @@ class CustomBlocksProcessor(BlockProcessor):
 
         if result is None:
             return True
-        if type(result) == type(u''):
-            result = result.encode('utf8')
-        if type(result) == type(b''):
+        if type(result) is str:
+            result = result.encode("utf8")
+        if type(result) is bytes:
             result = etree.XML(result)
         parent.append(result)
         return True
 
+
 def makeExtension(**kwargs):  # pragma: no cover
     return CustomBlocksExtension(**kwargs)
+
 
 # vim: et ts=4 sw=4

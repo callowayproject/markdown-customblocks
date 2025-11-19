@@ -1,54 +1,68 @@
 [build-system]
-requires = ["setuptools>=75", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.9.8,<0.10.0"]
+build-backend = "uv_build"
 
 [project]
 name = "markdown-customblocks"
 version = "1.5.3"
-description='Python Markdown extension to add custom parametrizable and nestable blocks'
+description = 'Python Markdown extension to add custom parametrizable and nestable blocks'
 authors = [
-    { name="David García Garzón", email="voki@canvoki.net" },
+    { name = "David García Garzón", email = "voki@canvoki.net" },
 ]
 readme = "README.md"
 requires-python = ">=3.8"
-license = { file="LICENSE"}
-keywords=["markdown","extension","customblocks","admonitions","container","figure","map","youtube","vimeo","twitter","facebook","instagram","verkami","goteo","mastodon","wikipedia","peertube"]
+license = { file = "LICENSE" }
+keywords = ["markdown", "extension", "customblocks", "admonitions", "container", "figure", "map", "youtube", "vimeo", "twitter", "facebook", "instagram", "verkami", "goteo", "mastodon", "wikipedia", "peertube"]
 
 classifiers = [
-	'Development Status :: 5 - Production/Stable',
-	'Environment :: Console',
-	'Intended Audience :: Developers',
-	'Intended Audience :: Science/Research',
-	'Intended Audience :: Other Audience',
-	'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)',
-	'Operating System :: OS Independent',
-	'Programming Language :: Python :: 3',
-	'Programming Language :: Python :: 3.8',
-	'Programming Language :: Python :: 3.9',
-	'Programming Language :: Python :: 3.10',
-	'Programming Language :: Python :: 3.11',
-	'Programming Language :: Python :: 3.12',
-	'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
-	'Topic :: Software Development :: Libraries :: Python Modules',
-	'Topic :: Text Processing :: Filters',
-	'Topic :: Text Processing :: Markup :: HTML',
+    'Development Status :: 5 - Production/Stable',
+    'Environment :: Console',
+    'Intended Audience :: Developers',
+    'Intended Audience :: Science/Research',
+    'Intended Audience :: Other Audience',
+    'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    'Topic :: Text Processing :: Filters',
+    'Topic :: Text Processing :: Markup :: HTML',
 ]
 
 dependencies = [
-	'markdown',
-	'yamlns>=0.11', # supports assertNsContains
-	'beautifulsoup4',
-	'decorator',
-	'geocoder', # map
-	'pytest', # testing
-	'pytest-cov<4', # testing
-	'responses', # testing
-	#'mkdocs', # docs
-	#'mkdocs-material', # docs
-	'urllib3<2', # conflicts with requests
-	'python-magic', # figure embed
-	'pillow',
+    'markdown',
+    'yamlns>=0.11', # supports assertNsContains
+    'beautifulsoup4',
+    'decorator',
+    'geocoder', # map
+    'urllib3<2', # conflicts with requests
+    'python-magic', # figure embed
+    'pillow',
+    'requests',
 ]
+
+[dependency-groups]
+test = [
+    'pytest', # testing
+    'pytest-cov', # testing
+    'responses', # testing
+]
+docs = [
+    'mkdocs', # docsuv sync -upgrade
+    'mkdocs-material', # docs
+]
+
+[tool.uv]
+default-groups = ["test", "docs"]
+
+[tool.uv.build-backend]
+module-name = "customblocks"
+module-root = ""
 
 [project.urls]
 Homepage = "https://vokimon.github.io/markdown-customblocks"
@@ -83,9 +97,6 @@ linkcard = "customblocks.generators:linkcard"
 figure = "customblocks.generators:figure"
 wikipedia = "customblocks.generators:wikipedia"
 
-[tool.setuptools.packages]
-find = {}
-
 [tool.coverage.run]
 relative_files = true
 branch = true
@@ -93,5 +104,152 @@ omit = ["**/*test.py"]
 
 [tool.pytest.ini_options]
 addopts = "--cov=customblocks"
+testpaths = ["tests"]
 
+[tool.interrogate]
+ignore-init-method = true
+ignore-init-module = false
+ignore-magic = true
+ignore-semiprivate = false
+ignore-private = false
+ignore-property-decorators = false
+ignore-module = false
+ignore-nested-functions = true
+ignore-nested-classes = true
+ignore-setters = false
+fail-under = 90
+exclude = ["setup.py", "docs", "build"]
+ignore-regex = ["^get$", "^mock_.*", ".*BaseClass.*"]
+verbose = 0
+quiet = false
+whitelist-regex = []
+color = true
 
+[tool.black]
+line-length = 119
+
+[tool.ruff]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+# Same as Black.
+line-length = 119
+
+[tool.ruff.lint]
+preview = true
+select = [
+    "A", # flake8-builtins
+    "ANN", # flake8-annotations
+    "B", # flake8-bugbear
+    "BLE", # flake8-blind except
+    "C4", # flake8-comprehensions
+    "C90", # McCabe complexity
+    "D", # pydocstyle
+    "E", # pycodestyle errors
+    "EXE", # flake8-executable
+    "F", # pyflakes
+    "I", # isort
+    "N", # PEP8 naming
+    "NPY", # NumPy-specific rules
+    "PD", # Pandas-vet
+    "PERF", # Perflint
+    "PGH", # PyGrep hooks
+    "PLC", # Pylint conventions
+    "PLE", # Pylint errors
+    "PLW", # Pylint warnings
+    "Q", # flake8-quotes
+    "RUF", # Ruff-specific rules
+    "S", # flake8-bandit
+    "SIM", # flake8-simplify
+    "TCH", # Flake8 type-checking
+    "W", # pycodestyle warnings
+]
+ignore = [
+    "ANN002", # missing-type-args
+    "ANN003", # missing-type-kwargs
+    "ANN204", # missing-return-type-special-method
+    "ANN401", # any-type
+    "D105", # undocumented-magic-method
+    "D106", # undocumented-public-nested-class
+    "D107", # undocumented-public-init
+    "D200", # fits-on-one-line
+    "D212", # multi-line-summary-first-line
+    "N802",
+    "N812", # lowercase-imported-as-non-lowercase
+    "N815", # mixed-case-variable-in-class-scope
+    "PD011", # pandas-use-of-dot-values
+    "PLC0415", # import-outside-toplevel
+    "PLW0108", # unnecessary-lambda
+    "PLW1641", # eq-without-hash
+    "S101", # assert
+    "S104", # hardcoded-bind-all-interfaces
+    "S404", # suspicious-subprocess-import
+    "S602", # subprocess-popen-with-shell-equals-true
+]
+
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+typing-modules = ["typing", "types", "typing_extensions", "mypy", "mypy_extensions"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "ANN001", # missing-type-function-argument
+    "ANN002", # missing-type-args
+    "ANN003", # missing-type-kwargs
+    "ANN201", # missing-return-type-undocumented-public-function
+    "ANN202", # missing-return-type-private-function
+    "PGH003", # blanket-type-ignore
+    "PLR0912", # too-many-branches
+    "PLR0913", # too-many-arguments
+    "PLR0915", # too-many-statements
+    "PLR2004", # magic-value-comparison
+    "PLW0603", # global-statement
+    "S101", # assert
+    "S105", # hardcoded-password-string
+    "S106", # hardcoded-password-func-arg
+    "TRY003", # raise-vanilla-args
+    "TRY201", # verbose-raise
+    "TRY301", # raise-within-try
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.isort]
+order-by-type = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pydoclint]
+style = "google"
+exclude = '\.git|tests'
+require-return-section-when-returning-nothing = false
+arg-type-hints-in-docstring = false
+check-return-types = false
+skip-checking-raises = true
+quiet = true
